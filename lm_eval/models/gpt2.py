@@ -1,6 +1,7 @@
 import torch
 import transformers
 from typing import Optional, Union
+from optimum.onnxruntime import ORTModelForCausalLM
 from lm_eval.base import BaseLM
 
 
@@ -26,6 +27,7 @@ class HFLM(BaseLM):
         subfolder=None,
         tokenizer=None,
         batch_size=1,
+        is_ort=False,
         load_in_8bit: Optional[bool] = False,
         trust_remote_code: Optional[bool] = False,
         dtype: Optional[Union[str, torch.dtype]]="auto",
@@ -54,15 +56,23 @@ class HFLM(BaseLM):
         # TODO: update this to be less of a hack once subfolder is fixed in HF
         revision = revision + ("/" + subfolder if subfolder is not None else "")
 
-        self.gpt2 = transformers.AutoModelForCausalLM.from_pretrained(
-            pretrained,
-            load_in_8bit=load_in_8bit,
-            low_cpu_mem_usage=low_cpu_mem_usage,
-            revision=revision,
-            torch_dtype=_get_dtype(dtype),
-            trust_remote_code=trust_remote_code,
-        ).to(self.device)
-        self.gpt2.eval()
+        if is_ort:
+            self.gpt2 = ORTModelForCausalLM.from_pretrained(
+                pretrained,
+                revision=revision,
+                trust_remote_code=trust_remote_code,
+            )
+
+        else:
+            self.gpt2 = transformers.AutoModelForCausalLM.from_pretrained(
+                pretrained,
+                load_in_8bit=load_in_8bit,
+                low_cpu_mem_usage=low_cpu_mem_usage,
+                revision=revision,
+                torch_dtype=_get_dtype(dtype),
+                trust_remote_code=trust_remote_code,
+            ).to(self.device)
+            self.gpt2.eval()
 
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             pretrained if tokenizer is None else tokenizer,
