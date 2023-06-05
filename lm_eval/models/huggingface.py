@@ -72,6 +72,7 @@ class HuggingFaceAutoLM(BaseLM):
         pretrained: str,
         quantized: Optional[Union[bool, str]] = False,
         tokenizer: Optional[str] = None,
+        is_ort: Optional[bool] = False,
         subfolder: Optional[str] = None,
         revision: Optional[str] = "main",
         batch_size: Optional[Union[int, str]] = 1,
@@ -181,14 +182,7 @@ class HuggingFaceAutoLM(BaseLM):
         )
 
         self._add_special_tokens = add_special_tokens
-        self.tokenizer = self._create_auto_tokenizer(
-            pretrained=pretrained,
-            revision=revision,
-            subfolder=subfolder,
-            tokenizer=tokenizer,
-        )
-        self.tokenizer.model_max_length = self.max_length
-
+        
         model_kwargs = {}
         if use_accelerate:
             model_kwargs = _get_accelerate_args(
@@ -198,27 +192,52 @@ class HuggingFaceAutoLM(BaseLM):
                 offload_folder,
             )
         model_kwargs["load_in_8bit"] = load_in_8bit
-        self.model = self._create_auto_model(
-            pretrained=pretrained,
-            quantized=quantized,
-            trust_remote_code=trust_remote_code,
-            revision=revision,
-            subfolder=subfolder,
-            torch_dtype=_get_dtype(dtype, self._config),
-            gptq_use_triton=gptq_use_triton,
-            **model_kwargs,
-        )
-        # note: peft_path can be different than pretrained model path
-        if peft is not None:
-            self.model = self._create_auto_model_peft(
-                model=self.model,
-                peft=peft,
+
+        if is_ort:
+            from optimum.onnxruntime import ORTModelForCausalLM
+            
+            self.model = ORTModelForCausalLM.from_pretrained(
+                pretrained,
+                revision=revision,
+                subfolder=subfolder,
+                trust_remote_code=trust_remote_code,
+            )
+            self.tokenizer = self.model.preprocessors[0]
+
+        else:
+            self.model = self._create_auto_model(
+                pretrained=pretrained,
+                quantized=quantized,
+                trust_remote_code=trust_remote_code,
                 revision=revision,
                 subfolder=subfolder,
                 torch_dtype=_get_dtype(dtype, self._config),
+                gptq_use_triton=gptq_use_triton,
                 **model_kwargs,
             )
-        self.model.eval()
+        # note: peft_path can be different than pretrained model path
+            if peft is not None:
+                self.model = self._create_auto_model_peft(
+                    model=self.model,
+                    peft=peft,
+                    revision=revision,
+                    subfolder=subfolder,
+                    torch_dtype=_get_dtype(dtype, self._config),
+                    **model_kwargs,
+                )
+                
+            self.model.eval()            
+            self.tokenizer = self._create_auto_tokenizer(
+                pretrained=pretrained,
+                revision=revision,
+                subfolder=subfolder,
+                tokenizer=tokenizer,
+            )
+
+        self.tokenizer.model_max_length = self.max_length
+
+
+
         torch.set_grad_enabled(False)
 
         self._device = device
