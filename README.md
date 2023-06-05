@@ -18,7 +18,7 @@ Features:
 To install `lm-eval` from the github repository main branch, run:
 
 ```bash
-git clone https://github.com/EleutherAI/lm-evaluation-harness
+git clone https://github.com/t-iykeosujiv/lm-evaluation-harness
 cd lm-evaluation-harness
 pip install -e .
 ```
