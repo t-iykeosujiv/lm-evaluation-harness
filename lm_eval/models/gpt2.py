@@ -62,6 +62,7 @@ class HFLM(BaseLM):
                 revision=revision,
                 trust_remote_code=trust_remote_code,
             )
+            self.tokenizer = self.gpt2.preprocessors[0]
 
         else:
             self.gpt2 = transformers.AutoModelForCausalLM.from_pretrained(
@@ -74,11 +75,11 @@ class HFLM(BaseLM):
             ).to(self.device)
             self.gpt2.eval()
 
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-            pretrained if tokenizer is None else tokenizer,
-            revision=revision,
-            trust_remote_code=trust_remote_code,
-        )
+            self.tokenizer = transformers.AutoTokenizer.from_pretrained(
+                pretrained if tokenizer is None else tokenizer,
+                revision=revision,
+                trust_remote_code=trust_remote_code,
+            )
 
         self.vocab_size = self.tokenizer.vocab_size
 
