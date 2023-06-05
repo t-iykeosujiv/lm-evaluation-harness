@@ -196,13 +196,22 @@ class HuggingFaceAutoLM(BaseLM):
         if is_ort:
             from optimum.onnxruntime import ORTModelForCausalLM
             
+            subfolder = '' if subfolder is None else subfolder
             self.model = ORTModelForCausalLM.from_pretrained(
                 pretrained,
                 revision=revision,
                 subfolder=subfolder,
                 trust_remote_code=trust_remote_code,
             )
-            self.tokenizer = self.model.preprocessors[0]
+            try:
+                self.tokenizer = self.model.preprocessors[0]
+            except:
+                self.tokenizer = self._create_auto_tokenizer(
+                    pretrained=pretrained,
+                    revision=revision,
+                    subfolder=subfolder,
+                    tokenizer=tokenizer,
+                )
 
         else:
             self.model = self._create_auto_model(
@@ -225,7 +234,7 @@ class HuggingFaceAutoLM(BaseLM):
                     torch_dtype=_get_dtype(dtype, self._config),
                     **model_kwargs,
                 )
-                
+
             self.model.eval()            
             self.tokenizer = self._create_auto_tokenizer(
                 pretrained=pretrained,
