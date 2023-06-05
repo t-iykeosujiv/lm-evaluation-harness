@@ -39,6 +39,7 @@ setuptools.setup(
         "transformers>=4.1",
         "zstandard",
         "accelerate>=0.17.1",
+        "optimum>=1.8.6",
     ],
     extras_require={
         "dev": ["black", "flake8", "pre-commit", "pytest", "pytest-cov"],
