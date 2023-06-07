@@ -199,6 +199,7 @@ class HuggingFaceAutoLM(BaseLM):
             subfolder = '' if subfolder is None else subfolder
             self.model = ORTModelForCausalLM.from_pretrained(
                 pretrained,
+                use_io_binding=True,
                 revision=revision,
                 subfolder=subfolder,
                 trust_remote_code=trust_remote_code,
