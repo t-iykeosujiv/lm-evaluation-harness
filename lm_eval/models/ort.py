@@ -1,4 +1,4 @@
-from huggingface import stop_sequences_criteria
+from . import huggingface
 import torch
 import torch.nn.functional as F
 from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer, BatchEncoding
@@ -277,7 +277,7 @@ class ORTCausalLM(BaseLM):
         input_ids = input_ids.to(self.device)
         attention_mask = attention_mask.to(self.device)
 
-        stopping_criteria = stop_sequences_criteria(
+        stopping_criteria = huggingface.stop_sequences_criteria(
             self.tokenizer, stop, input_ids.shape[1], input_ids.shape[0]
         )
 
