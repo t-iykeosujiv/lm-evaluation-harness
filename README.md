@@ -62,17 +62,7 @@ python main.py \
     --device cuda:0
 ```
 
-To evaluate ORT models, use `--model hf-causal-experimental` and add this model_arg `is_ort=True`. For example:
-
-```bash
-python main.py \
-    --model hf-causal-experimental \
-    --model_args pretrained=<MODEL_PATH>,is_ort=True \
-    --tasks lambada_openai \
-    --device cpu
-```
-
-To evaluate models that are loaded via `AutoSeq2SeqLM` in Huggingface, you instead use `hf-seq2seq`. *To evaluate (causal) models across multiple GPUs, use `--model hf-causal-experimental`*. 
+To evaluate models that are loaded via `AutoSeq2SeqLM` in Huggingface, you instead use `hf-seq2seq`. *To evaluate (causal) models across multiple GPUs, use `--model hf-causal-experimental`*. To evaluate ORT causal models, use `--model ort-causal`.
 
 > **Warning**: Choosing the wrong model may result in erroneous outputs despite not erroring.
 
