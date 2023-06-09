@@ -223,11 +223,6 @@ class ORTCausalLM(BaseLM):
     @property
     def max_length(self) -> int:
         """Return the maximum sequence length of the model.
-        NOTE: Different model configurations have different max sequence length
-        attribute names.
-            - n_positions: (CTRLConfig, T5Config)
-            - max_position_embeddings: (BartConfig, RoFormerConfig)
-            - n_ctx: (GPT2Config)
         NOTE: For relative position encoded models you should specify the max
         sequence length of the model in the constructor via `max_length`.
         """
