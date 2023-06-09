@@ -184,6 +184,7 @@ class ORTCausalLM(BaseLM):
                 )
         self._config = self.model.config            
         self.tokenizer.model_max_length = self.max_length
+        self._padding = self.tokenizer.pad_token is not None
         torch.set_grad_enabled(False)
 
         self._device = device
@@ -292,10 +293,9 @@ class ORTCausalLM(BaseLM):
         return self.tok_encode_batch(string, only_ids=True).tolist()
 
     def tok_encode_batch(self, strings: Union[str, List[str], List[List[str]]], only_ids: bool=False) -> TokenSequence:
-        padding = self.tokenizer.pad_token is not None
         inputs = self.tokenizer(
             strings,
-            padding=padding,
+            padding=self._padding,
             add_special_tokens=self.add_special_tokens,
             return_tensors="pt",
             return_token_type_ids=False,
