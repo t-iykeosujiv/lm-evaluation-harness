@@ -72,7 +72,7 @@ class ORTCausalLM(BaseLM):
         provider_options: Optional[Dict[str, Any]] = None,
         **kwargs,
         ):
-        """Initializes an ORT `CasualModel` and huggingface `AutoTokenizer` for evaluation.
+        """Initializes an ORT `CausalModel` and huggingface `AutoTokenizer` for evaluation.
         Args:
             pretrained (str):
                 The Path to the ONNX model to be loaded. This is effectively the 
@@ -173,6 +173,7 @@ class ORTCausalLM(BaseLM):
             session_options = session_options,
             provider_options = provider_options,
             **kwargs,
+            **model_kwargs,
             )
         try:
             self.tokenizer: PreTrainedTokenizerBase = self.model.preprocessors[0]
@@ -289,9 +290,9 @@ class ORTCausalLM(BaseLM):
         )
 
     def tok_encode(self, string: str) -> TokenSequence:
-        return self.tok_encode_batch(string)
+        return self.tok_encode_batch(string, only_ids=True)
 
-    def tok_encode_batch(self, strings: Union[str, List[str], List[List[str]]]) -> TokenSequence:
+    def tok_encode_batch(self, strings: Union[str, List[str], List[List[str]]], only_ids: bool=False) -> TokenSequence:
         inputs = self.tokenizer(
             strings,
             padding=True,
@@ -299,8 +300,9 @@ class ORTCausalLM(BaseLM):
             return_tensors="pt",
             return_token_type_ids=False,
         )
-
-        return inputs["input_ids"]
+        if only_ids:
+            return inputs["input_ids"]
+        return inputs
 
     def tok_decode(self, tokens: torch.LongTensor) -> List[str]:
         return self.tokenizer.batch_decode(tokens, skip_special_tokens=True)
