@@ -301,7 +301,7 @@ class ORTCausalLM(BaseLM):
             return_token_type_ids=False,
         )
         if only_ids:
-            return inputs["input_ids"]
+            return inputs["input_ids"][-1]
         return inputs
 
     def tok_decode(self, tokens: torch.LongTensor) -> List[str]:
