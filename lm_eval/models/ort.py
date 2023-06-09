@@ -146,11 +146,6 @@ class ORTCausalLM(BaseLM):
 
         self._max_gen_toks = max_gen_toks
         self._max_length = max_length
-        self._config = AutoConfig.from_pretrained(
-            pretrained,
-            trust_remote_code=trust_remote_code,
-            revision=revision + ("/" + subfolder if subfolder is not None else ""),
-        )
         self._add_special_tokens = add_special_tokens
         model_kwargs = {}
         if use_accelerate:
@@ -188,7 +183,7 @@ class ORTCausalLM(BaseLM):
                 )
             
         self.tokenizer.model_max_length = self.max_length
-
+        self._config = self.model.config
         torch.set_grad_enabled(False)
 
         self._device = device
@@ -199,6 +194,7 @@ class ORTCausalLM(BaseLM):
             self._device = self.model.hf_device_map["lm_head"]
         if not use_accelerate:
             self.model.to(self._device)
+        self.attention_mask = None
 
     @property
     def add_special_tokens(self) -> bool:
