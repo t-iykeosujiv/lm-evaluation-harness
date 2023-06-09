@@ -1,7 +1,7 @@
 from . import huggingface
 import torch
 import torch.nn.functional as F
-from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizer, BatchEncoding
+from transformers import AutoTokenizer, BatchEncoding, PreTrainedTokenizerBase
 from tqdm import tqdm
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -158,7 +158,7 @@ class ORTCausalLM(BaseLM):
         model_kwargs["load_in_8bit"] = load_in_8bit    
         
         subfolder = '' if subfolder is None else subfolder
-        self.model = ORTModelForCausalLM.from_pretrained(
+        self.model: ORTModelForCausalLM = ORTModelForCausalLM.from_pretrained(
             pretrained,
             use_io_binding=True,
             revision=revision,
@@ -175,7 +175,7 @@ class ORTCausalLM(BaseLM):
             **kwargs,
             )
         try:
-            self.tokenizer = self.model.preprocessors[0]
+            self.tokenizer: PreTrainedTokenizerBase = self.model.preprocessors[0]
         except:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 pretrained if tokenizer is None else tokenizer,
@@ -194,7 +194,6 @@ class ORTCausalLM(BaseLM):
             self._device = self.model.hf_device_map["lm_head"]
         if not use_accelerate:
             self.model.to(self._device)
-        self.attention_mask = None
 
     @property
     def add_special_tokens(self) -> bool:
@@ -256,7 +255,8 @@ class ORTCausalLM(BaseLM):
     def _model_call(
         self, inputs: TokenSequence, labels: Optional[TokenSequence] = None
     ) -> TokenSequence:
-        return self.model(inputs)["logits"]
+        attention_mask = torch.ones(inputs.shape, dtype=torch.int64, device='cpu')
+        return self.model(inputs, attention_mask)["logits"]
 
     def _model_generate(
         self,
@@ -266,20 +266,17 @@ class ORTCausalLM(BaseLM):
     ) -> TokenSequence:
         # Ensure that the context does not encroach into the `space`
         # for the generation.
-        input_ids = inputs["input_ids"][:, self.max_gen_toks - self.max_length :]
-        attention_mask = inputs["attention_mask"][
+        inputs["input_ids"] = inputs["input_ids"][:, self.max_gen_toks - self.max_length :]
+        inputs["attention_mask"] = inputs["attention_mask"][
             :, self.max_gen_toks - self.max_length :
         ]
-        input_ids = input_ids.to(self.device)
-        attention_mask = attention_mask.to(self.device)
 
         stopping_criteria = huggingface.stop_sequences_criteria(
-            self.tokenizer, stop, input_ids.shape[1], input_ids.shape[0]
+            self.tokenizer, stop, inputs["input_ids"].shape[1], inputs["input_ids"].shape[0]
         )
-
+        
         generations = self.model.generate(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
+            **inputs,
             # GPT style models require the `generate` `max_length` arg to include the
             # context length, so we instead set `max_new_tokens` which is the number
             # of new tokens to generate, excluding the current number of tokens.
@@ -292,16 +289,18 @@ class ORTCausalLM(BaseLM):
         )
 
     def tok_encode(self, string: str) -> TokenSequence:
-        # TODO: Merge `tok_encode_batch` here.
-        return self.tokenizer.encode(string, add_special_tokens=self.add_special_tokens)
+        return self.tok_encode_batch(string)
 
-    def tok_encode_batch(self, strings: List[str]) -> TokenSequence:
-        return self.tokenizer(
+    def tok_encode_batch(self, strings: Union[str, List[str], List[List[str]]]) -> TokenSequence:
+        inputs = self.tokenizer(
             strings,
             padding=True,
             add_special_tokens=self.add_special_tokens,
             return_tensors="pt",
+            return_token_type_ids=False,
         )
+
+        return inputs["input_ids"]
 
     def tok_decode(self, tokens: torch.LongTensor) -> List[str]:
         return self.tokenizer.batch_decode(tokens, skip_special_tokens=True)
