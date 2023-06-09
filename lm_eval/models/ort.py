@@ -289,7 +289,7 @@ class ORTCausalLM(BaseLM):
         )
 
     def tok_encode(self, string: str) -> TokenSequence:
-        return self.tok_encode_batch(string, only_ids=True)
+        return self.tokenizer.encode(string, add_special_tokens=self.add_special_tokens)
 
     def tok_encode_batch(self, strings: Union[str, List[str], List[List[str]]], only_ids: bool=False) -> TokenSequence:
         padding = self.tokenizer.pad_token is not None
