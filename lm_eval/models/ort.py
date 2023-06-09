@@ -182,9 +182,8 @@ class ORTCausalLM(BaseLM):
                 pretrained if tokenizer is None else tokenizer,
                 revision=revision + ("/" + subfolder if subfolder is not None else ""),
                 )
-            
+        self._config = self.model.config            
         self.tokenizer.model_max_length = self.max_length
-        self._config = self.model.config
         torch.set_grad_enabled(False)
 
         self._device = device
